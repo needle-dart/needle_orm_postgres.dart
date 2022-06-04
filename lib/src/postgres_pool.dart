@@ -40,12 +40,20 @@ class PostgreSqlPoolDataSource extends DataSource {
     logger.fine('Query: $sql');
     logger.fine('Params: $substitutionValues');
 
-    // Convert List into String  @TODO seems not work
+    // expand List first
     var param = <String, dynamic>{};
     substitutionValues.forEach((key, value) {
       if (value is List) {
-        param[key] = jsonEncode(value);
-        logger.fine('\t json: $key => ${param[key]}');
+        var newKeys = [];
+        for (var i = 0; i < value.length; i++) {
+          var key2 = '${key}_$i';
+          param[key2] = value[i];
+          newKeys.add('@$key2');
+        }
+
+        var strReplace = "(${newKeys.join(',')})";
+        sql = sql.replaceAll('@$key ',
+            strReplace); // '@$key ' means all key must be followed by a ' ' to prevent mis-replace!
       } else {
         param[key] = value;
       }

@@ -23,12 +23,12 @@ void main() {
         ..concurrency = 5,
     ));
 
-    var rows = await ds.execute(
-        'books', 'SELECT * FROM books where id < @maxId', {'maxId': 100});
-    // var rows =
-    //     await ds.execute('books', 'SELECT * FROM books where id in @idList', {
-    //   'idList': [1, 2]
-    // });
+    // var rows = await ds.execute(
+    //     'books', 'SELECT * FROM books where id < @maxId', {'maxId': 100});
+    var rows =
+        await ds.execute('books', 'SELECT * FROM books where id in @idList ', {
+      'idList': [1, 2]
+    });
     print(rows);
   });
 }
