@@ -6,13 +6,13 @@ import 'package:needle_orm/needle_orm.dart';
 import 'postgres.dart';
 
 /// A [QueryExecutor] that uses `package:postgres_pool` for connetions pooling.
-class PostgreSqlPoolDataSource extends Database {
+class PostgreSqlPoolDatabase extends Database {
   final PgPool _pool;
 
   /// An optional [Logger] to print information to.
   late Logger logger;
 
-  PostgreSqlPoolDataSource(this._pool, {Logger? logger})
+  PostgreSqlPoolDatabase(this._pool, {Logger? logger})
       : super(DatabaseType.PostgreSQL, '10.0') {
     this.logger = logger ?? Logger('PostgreSqlPoolDatabase');
   }
@@ -68,7 +68,7 @@ class PostgreSqlPoolDataSource extends Database {
   @override
   Future<T> transaction<T>(FutureOr<T> Function(Database) f) async {
     return _pool.runTx((pgContext) async {
-      var exec = PostgreSqlDataSource(pgContext, logger: logger);
+      var exec = PostgreSqlDatabase(pgContext, logger: logger);
       return await f(exec);
     });
   }

@@ -10,7 +10,7 @@ void main() {
       print(
           '${record.level.name}: ${record.time} ${record.loggerName}: ${record.message}');
     });
-    var ds = PostgreSqlPoolDataSource(PgPool(
+    var ds = PostgreSqlPoolDatabase(PgPool(
       PgEndpoint(
         host: 'localhost',
         port: 5432,

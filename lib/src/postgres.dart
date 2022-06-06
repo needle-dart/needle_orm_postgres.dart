@@ -7,14 +7,14 @@ import 'package:postgres/postgres.dart';
 import 'package:needle_orm/needle_orm.dart';
 
 /// A [QueryExecutor] that queries a PostgreSQL database.
-class PostgreSqlDataSource extends Database {
+class PostgreSqlDatabase extends Database {
   final PostgreSQLExecutionContext _connection;
 
   /// An optional [Logger] to print information to. A default logger will be used
   /// if not set
   late Logger logger;
 
-  PostgreSqlDataSource(this._connection, {Logger? logger})
+  PostgreSqlDatabase(this._connection, {Logger? logger})
       : super(DatabaseType.PostgreSQL, '10.0') {
     this.logger = logger ?? Logger('PostgreSqlDatabase');
   }
@@ -80,7 +80,7 @@ class PostgreSqlDataSource extends Database {
     var txResult = await conn.transaction((ctx) async {
       try {
         logger.fine('Entering transaction');
-        var tx = PostgreSqlDataSource(ctx, logger: logger);
+        var tx = PostgreSqlDatabase(ctx, logger: logger);
         returnValue = await f(tx);
 
         return returnValue;
@@ -106,7 +106,7 @@ class PostgreSqlDataSource extends Database {
 }
 
 /// A [QueryExecutor] that manages a pool of PostgreSQL connections.
-class PostgreSqlDataSourcePool extends Database {
+class PostgreSqlDatabasePool extends Database {
   /// The maximum amount of concurrent connections.
   final int size;
 
@@ -118,12 +118,12 @@ class PostgreSqlDataSourcePool extends Database {
   /// An optional [Logger] to print information to.
   late Logger logger;
 
-  final List<PostgreSqlDataSource> _connections = [];
+  final List<PostgreSqlDatabase> _connections = [];
   int _index = 0;
   late final Pool _pool;
   final _connMutex = Pool(1);
 
-  PostgreSqlDataSourcePool(this.size, this.connectionFactory, {Logger? logger})
+  PostgreSqlDatabasePool(this.size, this.connectionFactory, {Logger? logger})
       : super(DatabaseType.PostgreSQL, '10.0') {
     _pool = Pool(size);
     if (logger != null) {
@@ -152,12 +152,12 @@ class PostgreSqlDataSourcePool extends Database {
         //return conn
         //    .open()
         //    .then((_) => PostgreSqlExecutor(conn, logger: logger));
-        return PostgreSqlDataSource(conn, logger: logger);
+        return PostgreSqlDatabase(conn, logger: logger);
       })));
     }
   }
 
-  Future<PostgreSqlDataSource> _next() {
+  Future<PostgreSqlDatabase> _next() {
     return _connMutex.withResource(() async {
       await _open();
       if (_index >= size) _index = 0;
