@@ -6,7 +6,7 @@ import 'package:needle_orm/needle_orm.dart';
 import 'postgres.dart';
 
 /// A [QueryExecutor] that uses `package:postgres_pool` for connetions pooling.
-class PostgreSqlPoolDataSource extends DataSource {
+class PostgreSqlPoolDataSource extends Database {
   final PgPool _pool;
 
   /// An optional [Logger] to print information to.
@@ -14,7 +14,7 @@ class PostgreSqlPoolDataSource extends DataSource {
 
   PostgreSqlPoolDataSource(this._pool, {Logger? logger})
       : super(DatabaseType.PostgreSQL, '10.0') {
-    this.logger = logger ?? Logger('PostgreSqlPoolDataSource');
+    this.logger = logger ?? Logger('PostgreSqlPoolDatabase');
   }
 
   /// The underlying connection pooling.
@@ -28,8 +28,9 @@ class PostgreSqlPoolDataSource extends DataSource {
 
   /// Run query.
   @override
-  Future<List<List>> query(String sql, Map<String, dynamic> substitutionValues,
-      {List<String> returningFields = const [], String? tableName}) {
+  Future<DbQueryResult> query(
+      String sql, Map<String, dynamic> substitutionValues,
+      {List<String> returningFields = const [], String? tableName}) async {
     if (returningFields.isNotEmpty) {
       var fields = returningFields.join(', ');
       var returning = 'RETURNING $fields';
@@ -58,14 +59,14 @@ class PostgreSqlPoolDataSource extends DataSource {
       }
     });
 
-    return _pool.run<PostgreSQLResult>((pgContext) async {
+    return PgQueryResult(await _pool.run<PostgreSQLResult>((pgContext) async {
       return await pgContext.query(sql, substitutionValues: param);
-    });
+    }));
   }
 
   /// Run query in a transaction.
   @override
-  Future<T> transaction<T>(FutureOr<T> Function(DataSource) f) async {
+  Future<T> transaction<T>(FutureOr<T> Function(Database) f) async {
     return _pool.runTx((pgContext) async {
       var exec = PostgreSqlDataSource(pgContext, logger: logger);
       return await f(exec);

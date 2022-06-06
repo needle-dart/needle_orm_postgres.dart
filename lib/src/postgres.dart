@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'package:logging/logging.dart';
 import 'package:pool/pool.dart';
@@ -6,7 +7,7 @@ import 'package:postgres/postgres.dart';
 import 'package:needle_orm/needle_orm.dart';
 
 /// A [QueryExecutor] that queries a PostgreSQL database.
-class PostgreSqlDataSource extends DataSource {
+class PostgreSqlDataSource extends Database {
   final PostgreSQLExecutionContext _connection;
 
   /// An optional [Logger] to print information to. A default logger will be used
@@ -15,7 +16,7 @@ class PostgreSqlDataSource extends DataSource {
 
   PostgreSqlDataSource(this._connection, {Logger? logger})
       : super(DatabaseType.PostgreSQL, '10.0') {
-    this.logger = logger ?? Logger('PostgreSqlDataSource');
+    this.logger = logger ?? Logger('PostgreSqlDatabase');
   }
 
   /// The underlying connection.
@@ -32,8 +33,9 @@ class PostgreSqlDataSource extends DataSource {
   }
 
   @override
-  Future<List<List>> query(String sql, Map<String, dynamic> substitutionValues,
-      {List<String> returningFields = const [], String? tableName}) {
+  Future<DbQueryResult> query(
+      String sql, Map<String, dynamic> substitutionValues,
+      {List<String> returningFields = const [], String? tableName}) async {
     if (returningFields.isNotEmpty) {
       var fields = returningFields.join(', ');
       var returning = 'RETURNING $fields';
@@ -62,11 +64,12 @@ class PostgreSqlDataSource extends DataSource {
       }
     });
 
-    return _connection.query(sql, substitutionValues: param);
+    return PgQueryResult(
+        await _connection.query(sql, substitutionValues: param));
   }
 
   @override
-  Future<T> transaction<T>(FutureOr<T> Function(DataSource) f) async {
+  Future<T> transaction<T>(FutureOr<T> Function(Database) f) async {
     if (_connection is! PostgreSQLConnection) {
       return await f(this);
     }
@@ -103,7 +106,7 @@ class PostgreSqlDataSource extends DataSource {
 }
 
 /// A [QueryExecutor] that manages a pool of PostgreSQL connections.
-class PostgreSqlDataSourcePool extends DataSource {
+class PostgreSqlDataSourcePool extends Database {
   /// The maximum amount of concurrent connections.
   final int size;
 
@@ -126,7 +129,7 @@ class PostgreSqlDataSourcePool extends DataSource {
     if (logger != null) {
       this.logger = logger;
     } else {
-      this.logger = Logger('PostgreSqlDataSourcePool');
+      this.logger = Logger('PostgreSqlDatabasePool');
     }
 
     assert(size > 0, 'Connection pool cannot be empty.');
@@ -163,7 +166,8 @@ class PostgreSqlDataSourcePool extends DataSource {
   }
 
   @override
-  Future<List<List>> query(String sql, Map<String, dynamic> substitutionValues,
+  Future<DbQueryResult> query(
+      String sql, Map<String, dynamic> substitutionValues,
       {List<String> returningFields = const [], String? tableName}) {
     return _pool.withResource(() async {
       var executor = await _next();
@@ -173,10 +177,51 @@ class PostgreSqlDataSourcePool extends DataSource {
   }
 
   @override
-  Future<T> transaction<T>(FutureOr<T> Function(DataSource) f) {
+  Future<T> transaction<T>(FutureOr<T> Function(Database) f) {
     return _pool.withResource(() async {
       var executor = await _next();
       return executor.transaction(f);
     });
   }
+}
+
+class PgQueryResult extends DbQueryResult with ListMixin<List> {
+  final PostgreSQLResult _result;
+
+  PgQueryResult(this._result);
+
+  @override
+  int get length => _result.length;
+  void set length(int) {
+    throw UnimplementedError();
+  }
+
+  @override
+  List operator [](int index) {
+    return _result[index];
+  }
+
+  @override
+  void operator []=(int index, List value) {
+    throw UnimplementedError();
+  }
+
+  @override
+  int? get affectedRowCount => _result.affectedRowCount;
+
+  @override
+  List<DbColumnDescription> get columnDescriptions => _result.columnDescriptions
+      .map((desc) => PgDbColumnDescription(desc))
+      .toList();
+}
+
+class PgDbColumnDescription extends DbColumnDescription {
+  final ColumnDescription desc;
+  PgDbColumnDescription(this.desc);
+
+  /// The name of the column returned by the query.
+  String get columnName => desc.columnName;
+
+  /// The resolved name of the referenced table.
+  String get tableName => desc.tableName;
 }
