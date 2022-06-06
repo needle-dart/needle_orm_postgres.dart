@@ -25,8 +25,7 @@ void main() {
 
     // var rows = await ds.execute(
     //     'books', 'SELECT * FROM books where id < @maxId', {'maxId': 100});
-    var rows =
-        await ds.execute('books', 'SELECT * FROM books where id in @idList ', {
+    var rows = await ds.query('SELECT * FROM books where id in @idList ', {
       'idList': [1, 2]
     });
     print(rows);
