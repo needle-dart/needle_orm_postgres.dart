@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:logging/logging.dart';
 import 'package:postgres_pool/postgres_pool.dart';
 import 'package:needle_orm/needle_orm.dart';
@@ -22,15 +21,15 @@ class PostgreSqlPoolDataSource extends DataSource {
   PgPool get pool => _pool;
 
   /// Closes all the connections in the pool.
-  Future<dynamic> close() {
-    return _pool.close();
+  @override
+  Future<void> close() async {
+    await _pool.close();
   }
 
   /// Run query.
   @override
-  Future<PostgreSQLResult> execute(
-      String tableName, String sql, Map<String, dynamic> substitutionValues,
-      [List<String> returningFields = const []]) {
+  Future<List<List>> query(String sql, Map<String, dynamic> substitutionValues,
+      {List<String> returningFields = const [], String? tableName}) {
     if (returningFields.isNotEmpty) {
       var fields = returningFields.join(', ');
       var returning = 'RETURNING $fields';

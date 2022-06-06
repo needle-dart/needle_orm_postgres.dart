@@ -22,7 +22,8 @@ class PostgreSqlDataSource extends DataSource {
   PostgreSQLExecutionContext get connection => _connection;
 
   /// Closes the connection.
-  Future close() {
+  @override
+  Future<void> close() async {
     if (_connection is PostgreSQLConnection) {
       return (_connection as PostgreSQLConnection).close();
     } else {
@@ -31,9 +32,8 @@ class PostgreSqlDataSource extends DataSource {
   }
 
   @override
-  Future<PostgreSQLResult> execute(
-      String tableName, String sql, Map<String, dynamic> substitutionValues,
-      [List<String> returningFields = const []]) {
+  Future<List<List>> query(String sql, Map<String, dynamic> substitutionValues,
+      {List<String> returningFields = const [], String? tableName}) {
     if (returningFields.isNotEmpty) {
       var fields = returningFields.join(', ');
       var returning = 'RETURNING $fields';
@@ -133,10 +133,11 @@ class PostgreSqlDataSourcePool extends DataSource {
   }
 
   /// Closes all connections.
-  Future close() async {
+  @override
+  Future<void> close() async {
     await _pool.close();
     await _connMutex.close();
-    return Future.wait(_connections.map((c) => c.close()));
+    Future.wait(_connections.map((c) => c.close()));
   }
 
   Future _open() async {
@@ -162,13 +163,12 @@ class PostgreSqlDataSourcePool extends DataSource {
   }
 
   @override
-  Future<PostgreSQLResult> execute(
-      String tableName, String sql, Map<String, dynamic> substitutionValues,
-      [List<String> returningFields = const []]) {
+  Future<List<List>> query(String sql, Map<String, dynamic> substitutionValues,
+      {List<String> returningFields = const [], String? tableName}) {
     return _pool.withResource(() async {
       var executor = await _next();
-      return executor.execute(
-          tableName, sql, substitutionValues, returningFields);
+      return executor.query(sql, substitutionValues,
+          returningFields: returningFields, tableName: tableName);
     });
   }
 
