@@ -37,8 +37,7 @@ class PostgreSqlPoolDatabase extends Database {
       sql = '$sql $returning';
     }
 
-    logger.fine('Query: $sql');
-    logger.fine('Params: $substitutionValues');
+    logger.config('query: $sql ; params: $substitutionValues');
 
     // expand List first
     var param = <String, dynamic>{};

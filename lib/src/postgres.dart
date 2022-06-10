@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:convert';
 import 'package:logging/logging.dart';
 import 'package:pool/pool.dart';
 import 'package:postgres/postgres.dart';
@@ -42,8 +41,7 @@ class PostgreSqlDatabase extends Database {
       sql = '$sql $returning';
     }
 
-    logger.fine('Query: $sql');
-    logger.fine('Params: $substitutionValues');
+    logger.config('query: $sql ; params: $substitutionValues');
 
     // expand List first
     var param = <String, dynamic>{};
@@ -79,7 +77,7 @@ class PostgreSqlDatabase extends Database {
 
     var txResult = await conn.transaction((ctx) async {
       try {
-        logger.fine('Entering transaction');
+        logger.config('Entering transaction');
         var tx = PostgreSqlDatabase(ctx, logger: logger);
         returnValue = await f(tx);
 
@@ -88,7 +86,7 @@ class PostgreSqlDatabase extends Database {
         ctx.cancelTransaction(reason: e.toString());
         rethrow;
       } finally {
-        logger.fine('Exiting transaction');
+        logger.config('Exiting transaction');
       }
     });
 
@@ -146,7 +144,7 @@ class PostgreSqlDatabasePool extends Database {
   Future _open() async {
     if (_connections.isEmpty) {
       _connections.addAll(await Future.wait(List.generate(size, (_) async {
-        logger.fine('Spawning connections...');
+        logger.config('Spawning connections...');
         var conn = connectionFactory();
         await conn.open();
         //return conn
