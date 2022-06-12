@@ -141,7 +141,7 @@ class PostgreSqlDatabasePool extends Database {
     Future.wait(_connections.map((c) => c.close()));
   }
 
-  Future _open() async {
+  Future<void> _open() async {
     if (_connections.isEmpty) {
       _connections.addAll(await Future.wait(List.generate(size, (_) async {
         logger.config('Spawning connections...');
